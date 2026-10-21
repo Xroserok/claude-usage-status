@@ -1,0 +1,8 @@
+# Pinned developer tools for this repository.
+# Install: `mise install`   Activate in shell: eval "$(mise activate zsh)"
+# CI uses the same file via jdx/mise-action, so local and CI versions match.
+[tools]
+tuist = "4.212.0"      # generates the Xcode project from Project.swift
+swiftlint = "0.65.1"   # lint rules (.swiftlint.yml); formatting is Xcode's bundled `swift format`
+lefthook = "2.2.2"     # git hooks: pre-commit lint/format, commit-msg convention
+xcsift = "1.7.0"       # compact, agent-readable output for xcodebuild / swift build
