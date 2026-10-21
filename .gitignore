@@ -1,0 +1,24 @@
+# personal / local-only materials
+_local/
+
+# macOS
+.DS_Store
+
+# Xcode / Tuist generated
+*.xcodeproj
+*.xcworkspace
+Derived/
+.tuist-*
+xcuserdata/
+DerivedData/
+build/
+.build/
+*.app
+*.dSYM
+
+# Swift Package Manager
+Package.resolved
+.swiftpm/
+
+# Claude Code local overrides
+.claude/settings.local.json
