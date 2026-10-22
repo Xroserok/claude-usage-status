@@ -22,8 +22,20 @@ let project = Project(
             product: .app,
             bundleId: "com.xroserok.ClaudeUsageStatus",
             deploymentTargets: .macOS("14.0"),
-            infoPlist: .extendingDefault(with: [
+            // Explicit plist: Tuist's macOS default adds NSMainStoryboardFile,
+            // which a SwiftUI @main app does not have.
+            infoPlist: .dictionary([
+                "CFBundleDevelopmentRegion": "en",
+                "CFBundleExecutable": "$(EXECUTABLE_NAME)",
+                "CFBundleIdentifier": "$(PRODUCT_BUNDLE_IDENTIFIER)",
+                "CFBundleInfoDictionaryVersion": "6.0",
+                "CFBundleName": "$(PRODUCT_NAME)",
+                "CFBundlePackageType": "APPL",
+                "CFBundleShortVersionString": "0.1.0",
+                "CFBundleVersion": "1",
+                "LSMinimumSystemVersion": "$(MACOSX_DEPLOYMENT_TARGET)",
                 "LSUIElement": true,
+                "NSPrincipalClass": "NSApplication",
             ]),
             sources: ["Apps/macOS/Sources/**"],
             dependencies: [
