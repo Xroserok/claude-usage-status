@@ -221,69 +221,102 @@ common way to describe it as code and keep it modular. The `.xcodeproj` itself
 is not committed. From the terminal it builds with `tuist generate` +
 `xcodebuild`, which lets Claude Code build and test without the GUI.
 
+All logic lives in **local Swift packages**, one per layer. They build and
+test with plain `swift test` in seconds, without Xcode, which is what the
+harness stop-gate runs. The app target is a thin platform shell.
+
 ```
-Project.swift                      project description (Tuist)
+Project.swift                      Tuist: the app target, links the packages
 Tuist.swift
-Tuist/Package.swift                external dependencies (empty in v1)
 .swiftlint.yml
-App/
-  Sources/
-    ClaudeUsageStatusApp.swift     @main, MenuBarExtra
-    MenuContentView.swift          dropdown menu
-    UsageStore.swift               @Observable state + polling timer
-    Formatting.swift               percentages, "resets in …"
-    LaunchAtLogin.swift            wrapper over SMAppService
-  Resources/
-    Info.plist                     LSUIElement, version
-    Assets.xcassets
-UsageCore/                         UI-free framework, fully testable
-  Sources/
-    UsageSnapshot.swift            domain model (limits, reset, severity)
-    UsageResponse.swift            Decodable for the JSON in §2.1
-    UsageClient.swift              endpoint request, error mapping
-    CredentialsStore.swift         Keychain read → OAuthCredentials
-    OAuthCredentials.swift         accessToken, expiresAt, subscriptionType
-  Tests/
-    Fixtures/usage_2026-10-21.json recorded real response
-    UsageResponseTests.swift       parsing, unknown fields, nulls
-    UsageClientTests.swift         200 / 401 / 500 / timeout via a URLProtocol stub
-    CredentialsStoreTests.swift    Keychain JSON parsing, expired token
-    FormattingTests.swift          "resets in …", 24h boundaries
+Packages/
+  UsageDomain/                     models + protocols, Foundation only
+    Sources/UsageDomain/           UsageSnapshot, UsageLimit, UsageError,
+                                   UsageRepository, CredentialsProviding
+    Tests/UsageDomainTests/
+  UsageData/                       implementations of the domain protocols
+    Sources/UsageData/             UsageClient (URLSession), KeychainCredentialsStore,
+                                   DTOs for the JSON in §2.1 + mapping
+    Tests/UsageDataTests/          200 / 401 / 500 / timeout via a URLProtocol stub,
+      Fixtures/usage_2026-10-21.json   Keychain JSON parsing, expired token
+  UsagePresentation/               view models + formatting, no navigation
+    Sources/UsagePresentation/     UsageStore (@Observable), UsageFormatter
+    Tests/UsagePresentationTests/  "31% · 47%", "resets in …", state transitions
+Apps/
+  macOS/                           app target ClaudeUsageStatus
+    Sources/                       @main + MenuBarExtra, MenuContentView,
+                                   AppCoordinator, LaunchAtLogin (SMAppService)
+    Resources/                     Assets.xcassets
+Tools/
+  usage-probe/                     verification CLI (depends on UsageData)
 scripts/
   build.sh                         tuist generate + xcodebuild + ad-hoc signing
   run.sh                           build and relaunch the app
 spec.md  CLAUDE.md  progress.md  README.md
 ```
 
-Tuist targets: `ClaudeUsageStatus` (app, macOS), `UsageCore` (framework,
-macOS), `UsageCoreTests` (unit tests). No UI tests in v1.
+Module names are prefixed (`UsageData`, not `Data`) because `Data` would
+shadow `Foundation.Data` in every file that imports it.
 
-### 4.2. Pattern: MVVM with layers
-
-Decided on 2026-10-21: **MVVM** on the app side plus a layered split
-(Presentation → Domain → Data). Alternatives (TCA, "pure" MV) were considered
-and rejected: for an app with no navigation the value is a clean, testable
-`UsageCore`, not the number of abstractions. A Coordinator appears only when
-navigation does (settings window, onboarding) — see §8.
+Package dependency graph (arrows = "depends on"):
 
 ```
-View (SwiftUI, MenuBarExtra)   MenuContentView — renders state only
+UsagePresentation ──▶ UsageDomain ◀── UsageData
+        ▲                                ▲
+        └──────── Apps/macOS ────────────┘        (composition root)
+                  Tools/usage-probe ─────┘
+```
+
+`UsagePresentation` never imports `UsageData`: the app target creates the
+concrete `UsageClient` and `KeychainCredentialsStore` and hands them to the
+store through the domain protocols. Packages declare macOS 14, iOS 17 and
+watchOS 10 so the same code can later back an iOS widget or a watchOS
+complication (§8); only `Apps/macOS` exists in v1.
+
+Tuist targets: `ClaudeUsageStatus` (app, macOS). Unit tests run through the
+packages (`swift test`); no UI tests in v1.
+
+### 4.2. Pattern: MVVM-C with layers
+
+Decided on 2026-10-22: **MVVM + Coordinator** on the app side plus a layered
+split (Presentation → Domain → Data). TCA and "pure" MV were considered and
+rejected: for this app the value is a clean, testable core, not the number
+of abstractions. Clean Architecture use cases are not introduced until a
+second consumer of the domain needs them.
+
+Why the Coordinator already in v1: the view models must not know whether
+they live in a macOS menu, an iOS widget or a watchOS complication.
+Navigation and dependency wiring are platform-specific, so each app target
+gets its own coordinator while `UsagePresentation` stays shared. On macOS
+the coordinator is small: it builds the object graph, owns the refresh
+triggers (timer, menu open, wake) and later opens the settings window.
+
+```
+Apps/macOS
+  AppCoordinator                 composition root, refresh triggers, windows
+        ↓ creates & owns
+  View (SwiftUI, MenuBarExtra)   MenuContentView — renders state only
         ↓ observes
-ViewModel (@Observable)        UsageStore — screen state, timer, formatting
+UsagePresentation
+  ViewModel (@Observable)        UsageStore — screen state, formatting
         ↓ calls through protocols
-Domain (UsageCore)             UsageSnapshot, UsageLimit, domain errors
-        ↓
-Data (UsageCore)               UsageClient → URLSession, CredentialsStore → Security
+UsageDomain                      UsageSnapshot, UsageLimit, UsageError,
+                                 UsageRepository, CredentialsProviding
+        ↑ implemented by
+UsageData                        UsageClient → URLSession,
+                                 KeychainCredentialsStore → Security
 ```
 
-- `UsageCore` does not import SwiftUI/AppKit and knows nothing about timers.
-- The View never touches `UsageCore` directly, only `UsageStore`.
+- `UsageDomain` and `UsageData` do not import SwiftUI/AppKit and know
+  nothing about timers.
+- The View never touches `UsageData` directly, only `UsageStore`.
 - `UsageClient` takes a `URLSession` (or a loader protocol) and a
-  `CredentialsStore` through its initialiser — for substitution in tests.
-- `CredentialsStore` is a protocol with two implementations: Keychain and
-  in-memory for tests.
-- All public `UsageCore` types are `Sendable`; the project builds with
-  Swift 6 strict concurrency.
+  `CredentialsProviding` through its initialiser — for substitution in tests.
+- `CredentialsProviding` has two implementations: Keychain and in-memory for
+  tests.
+- All public package types are `Sendable`; everything builds with Swift 6
+  strict concurrency. The app target sets `SWIFT_DEFAULT_ACTOR_ISOLATION =
+  MainActor`; the packages do not.
 
 ### 4.3. Platform and tooling
 
@@ -296,8 +329,8 @@ Data (UsageCore)               UsageClient → URLSession, CredentialsStore → 
 | Networking | `URLSession`, `async/await` |
 | Dependencies | no third-party packages in v1 |
 | Linter | SwiftLint, config ported from `xros_bill_splitter` |
-| Tests | Swift Testing (`import Testing`), fixture with the real JSON |
-| CI | GitHub Actions on `macos-latest`: `tuist generate`, `xcodebuild test`, `swiftlint` |
+| Tests | Swift Testing (`import Testing`) inside each package, fixture with the real JSON |
+| CI | GitHub Actions on `macos-latest`: `swift test` per package, `tuist generate` + `xcodebuild build`, `swiftlint` |
 
 ### 4.4. Build and signing
 
@@ -371,9 +404,11 @@ account.
 - System notifications at thresholds and on window reset.
 - Weekly breakdown by product (`seven_day_breakdown`).
 - Extra usage and `spend` (money) once enabled.
-- Settings window: polling interval, thresholds, menu bar format. Together
-  with it — a **Coordinator** for navigation between the menu, settings and
-  onboarding (MVVM-C); until then there is no navigation and no need for the
-  layer.
+- Settings window: polling interval, thresholds, menu bar format (opened by
+  the existing `AppCoordinator`).
+- iOS companion app with a home-screen widget and a watchOS complication,
+  reusing the three packages; each platform gets its own app target and
+  coordinator. Clean Architecture use cases only if the domain grows beyond
+  "fetch a snapshot".
 - Notarised DMG, Homebrew cask, GitHub Releases on tag.
 - Codex / other providers in the same menu bar item (as competitors do).
