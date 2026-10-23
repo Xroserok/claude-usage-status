@@ -41,5 +41,5 @@ jobs:
         run: |
           set -o pipefail
           mise x -- tuist generate --no-open
-          xcodebuild -workspace ClaudeUsageStatus.xcworkspace -scheme ClaudeUsageStatus \
+          xcodebuild -workspace YourLimit.xcworkspace -scheme YourLimit \
             -configuration Release -derivedDataPath .build/DerivedData build | mise x -- xcsift

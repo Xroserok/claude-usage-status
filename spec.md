@@ -1,10 +1,10 @@
-# ClaudeUsageStatus — Specification
+# YourLimit — Specification
 
 A macOS menu bar app that permanently shows how much of your Claude subscription
 limits you have used: the current 5-hour session and the weekly window.
 
-- **Status:** specification, no code yet
-- **Date:** 2026-10-21
+- **Status:** harness ready, no app code yet
+- **Date:** 2026-10-21, decisions of §6 added 2026-10-23
 - **Target machine:** macOS 27.0 (build 26A428), Xcode 27.1, Swift 6.4
 - **User account:** Max subscription (`rateLimitTier = default_claude_max_5x`)
 - **Purpose:** personal tool and portfolio project (public repository)
@@ -15,15 +15,17 @@ limits you have used: the current 5-hour session and the weekly window.
 
 A resident menu bar app that shows two numbers without any extra action:
 the percentage used of the 5-hour session and of the weekly limit. On click it
-expands the details: when each window resets, and the separate per-model limits.
+opens a popover with the details: a progress bar per limit, coloured by
+threshold, when each window resets, and the separate per-model limits.
 
 This is what `/usage` in Claude Code shows, but always visible and without
-opening a terminal.
+opening a terminal. The interface is localised in English and Russian.
 
-Explicitly **out of scope** for v1: notifications, colour indication, charts and
-history, breakdown by product (Claude Code / Chats / Cowork), extra usage and
-money, a settings window, multiple accounts, API-key support (subscription only).
-All of it lives in the backlog (§8), not in v1.
+Explicitly **out of scope** for v1: notifications, charts and history,
+breakdown by product (Claude Code / Chats / Cowork), extra usage and money,
+a settings window, multiple accounts, API-key support (subscription only),
+any colour or icon in the menu bar itself. All of it lives in the backlog
+(§8), not in v1.
 
 ---
 
@@ -78,14 +80,14 @@ Verified on the target machine on 2026-10-21: HTTP 200, JSON. Full response
 ### 2.2. What we use from the response
 
 The source of truth for v1 is the **`limits`** array. The server already
-normalises it, and it carries everything the menu bar and the dropdown need:
+normalises it, and it carries everything the menu bar and the popover need:
 
 | Field | Type | Usage |
 |---|---|---|
 | `kind` | string | `session` → menu bar (first number); `weekly_all` → menu bar (second number); `weekly_scoped` → separate rows in the menu (per model) |
 | `percent` | integer 0–100 | shown as is |
 | `resets_at` | ISO 8601 with fractional seconds and offset | "resets in 3h 52m" / "at 15:00" |
-| `severity` | string, only `normal` observed | not shown in v1, but parsed and kept — needed for indication in v1.1 |
+| `severity` | string, only `normal` observed | parsed and kept; v1 colours bars by local thresholds (§3.2) because the other values are unknown |
 | `scope.model.display_name` | string or absent | label for `weekly_scoped` ("Fable") |
 | `is_active` | bool | unused in v1 |
 
@@ -132,7 +134,7 @@ Important observations:
   When `expiresAt` is in the past or the server returns HTTP 401, show the
   "sign in to Claude Code" state and wait for the item to be updated.
 - On first access macOS asks for permission to read the item
-  ("ClaudeUsageStatus wants to use your confidential information"). The user
+  ("YourLimit wants to use your confidential information"). The user
   picks "Always Allow". With ad-hoc signing the app identity changes on every
   rebuild and the prompt repeats — a known inconvenience of dev builds, see §5.
 
@@ -148,7 +150,7 @@ Important observations:
 - Check `expiresAt` before the request: if the token has already expired, skip
   the request and go straight to the "sign in required" state.
 - Do not spoof the `User-Agent` as Claude Code; send an honest
-  `ClaudeUsageStatus/<version>`.
+  `YourLimit/<version>`.
 
 ### 2.5. Privacy
 
@@ -167,7 +169,7 @@ Important observations:
 
 Two percentages separated by a middle dot: `31% · 47%`.
 First is the session (5h), second is the week (all models). Monospaced digits
-so the width does not jitter. No icon and no colour in v1.
+so the width does not jitter. No icon and no colour in the menu bar in v1.
 
 States shown instead of numbers:
 
@@ -175,38 +177,96 @@ States shown instead of numbers:
 |---|---|
 | No data yet (first launch) | `…` |
 | No token / expired / 401 | `⚠︎` |
-| Network down, stale data available | the numbers as they are (details in the menu) |
+| Keychain access denied by the user | `⚠︎` |
+| Network down, stale data available | the numbers as they are (details in the popover) |
 | Network down, no data ever | `—` |
 
-### 3.2. Dropdown menu
+### 3.2. Popover
+
+`MenuBarExtra` with the `.window` style: a click on the status item opens a
+SwiftUI popover, a click outside or Esc closes it. Fixed width, height from
+content.
 
 ```
-Session            31%   resets in 3h 52m
-Week (all models)  47%   resets Tue 15:00
-Week · Fable       56%   resets Tue 15:00
-────────────────────────────────
+Session                              31%
+████████████░░░░░░░░░░░░░░░░░░░░░░░░░░
+resets in 3h 52m
+
+Week (all models)                    47%
+██████████████████░░░░░░░░░░░░░░░░░░░░
+resets Tue 15:00
+
+Week · Fable                         56%
+█████████████████████░░░░░░░░░░░░░░░░░
+resets Tue 15:00
+────────────────────────────────────────
 Updated 14:08
-────────────────────────────────
-Refresh                       ⌘R
-Launch at Login               ✓
-────────────────────────────────
-Quit                          ⌘Q
+────────────────────────────────────────
+Refresh ⌘R        Launch at Login ☐        Quit ⌘Q
 ```
 
-- One `weekly_scoped` row per model present in the response; if there are
-  none, the block is absent.
+- One block per limit from `limits[]`: title, percentage, bar, reset line.
+  One `weekly_scoped` block per model present in the response; none if absent.
+- Bar colour by local thresholds, the same for every limit:
+  below 80 % the accent colour, 80–94 % orange, 95 % and above red. The
+  thresholds are constants in `UsagePresentation` and covered by unit tests;
+  `severity` from the response is not used for colour in v1 (§2.2).
 - Reset as "in N h M min" when less than 24 hours away, otherwise weekday and
-  time in the local time zone.
+  time in the local time zone, through Foundation formatters.
 - "Updated" is the time of the last **successful** response. On error a line
-  with the reason follows it: `Offline`, `Sign in to Claude Code`, `HTTP 500`.
-- UI language is English (public project). Strings are gathered in one place
-  so localisation can be added later.
+  with the reason follows it: `Offline`, `Sign in to Claude Code`,
+  `Keychain access denied` (with a Retry button that reads the Keychain
+  again and so re-triggers the system dialog), `HTTP 500`.
+- Buttons: Refresh (⌘R), Launch at Login toggle, Quit (⌘Q). The shortcuts
+  work while the popover is open.
 
-### 3.3. App behaviour
+### 3.3. Localisation
+
+English and Russian from v1. All user-facing strings live in one String
+Catalog, `Apps/macOS/Resources/Localizable.xcstrings`; the language follows
+the system. `UsagePresentation` exposes values (`Int`, `Duration`, `Date`,
+threshold level), never finished sentences; the app target turns them into
+localised text, and formatting tests pass an explicit `Locale`.
+
+Every element of the popover and the status item carries a stable
+accessibility identifier, which is what `scripts/verify-ui.sh` reads, so the
+check does not depend on the language:
+
+| Identifier | Element |
+|---|---|
+| `statusItem` | menu bar text |
+| `limit.<kind>.title`, `.percent`, `.bar`, `.reset` | one block per limit; `<kind>` is `session`, `weekly_all` or `weekly_scoped.<model>` |
+| `updated`, `error` | status lines |
+| `refresh`, `launchAtLogin`, `quit`, `retry` | controls |
+
+Russian strings of the popover:
+
+| English | Russian |
+|---|---|
+| Session | Сессия |
+| Week (all models) | Неделя (все модели) |
+| Week · Fable | Неделя · Fable |
+| resets in 3h 52m | сброс через 3 ч 52 мин |
+| resets Tue 15:00 | сброс вт 15:00 |
+| Updated 14:08 | Обновлено 14:08 |
+| Offline | Нет сети |
+| Sign in to Claude Code | Войдите в Claude Code |
+| Keychain access denied | Нет доступа к Связке ключей |
+| Retry | Повторить |
+| Refresh | Обновить |
+| Launch at Login | Запускать при входе |
+| Quit | Выйти |
+
+### 3.4. App behaviour
 
 - No Dock icon, no main window (`LSUIElement = true`).
-- Launch at login via `SMAppService.mainApp` (macOS 13+). If registration
-  fails (typical for ad-hoc signing) — show the error in the menu, never crash.
+- Launch at login via `SMAppService.mainApp` (macOS 13+), **off** by default.
+  If registration fails (typical for ad-hoc signing) — show the error in the
+  popover, never crash.
+- Reading the Keychain item of another app shows a system dialog on first
+  access; with ad-hoc signing "Always Allow" is forgotten after every rebuild.
+  "Deny" (`errSecAuthFailed` / `errSecUserCanceled`) is a separate state
+  (§3.1, §3.2), not "no token".
 - Leaves nothing behind on logout or `Quit`.
 
 ---
@@ -240,13 +300,13 @@ Packages/
     Tests/UsageDataTests/          200 / 401 / 500 / timeout via a URLProtocol stub,
       Fixtures/usage_2026-10-21.json   Keychain JSON parsing, expired token
   UsagePresentation/               view models + formatting, no navigation
-    Sources/UsagePresentation/     UsageStore (@Observable), UsageFormatter
-    Tests/UsagePresentationTests/  "31% · 47%", "resets in …", state transitions
+    Sources/UsagePresentation/     UsageStore (@Observable), UsageFormatter, Threshold
+    Tests/UsagePresentationTests/  "31% · 47%", reset values, threshold levels, state transitions
 Apps/
-  macOS/                           app target ClaudeUsageStatus
-    Sources/                       @main + MenuBarExtra, MenuContentView,
+  macOS/                           app target YourLimit
+    Sources/                       @main + MenuBarExtra(.window), PopoverView, LimitRow,
                                    AppCoordinator, LaunchAtLogin (SMAppService)
-    Resources/                     Assets.xcassets
+    Resources/                     Assets.xcassets, Localizable.xcstrings (en, ru)
 Tools/
   usage-probe/                     verification CLI (depends on UsageData)
 scripts/
@@ -273,7 +333,7 @@ store through the domain protocols. Packages declare macOS 14, iOS 17 and
 watchOS 10 so the same code can later back an iOS widget or a watchOS
 complication (§8); only `Apps/macOS` exists in v1.
 
-Tuist targets: `ClaudeUsageStatus` (app, macOS). Unit tests run through the
+Tuist targets: `YourLimit` (app, macOS). Unit tests run through the
 packages (`swift test`); no UI tests in v1.
 
 ### 4.2. Pattern: MVVM-C with layers
@@ -295,7 +355,7 @@ triggers (timer, menu open, wake) and later opens the settings window.
 Apps/macOS
   AppCoordinator                 composition root, refresh triggers, windows
         ↓ creates & owns
-  View (SwiftUI, MenuBarExtra)   MenuContentView — renders state only
+  View (SwiftUI, MenuBarExtra)   PopoverView — renders state only
         ↓ observes
 UsagePresentation
   ViewModel (@Observable)        UsageStore — screen state, formatting
@@ -324,7 +384,8 @@ UsageData                        UsageClient → URLSession,
 |---|---|
 | Minimum macOS | 14 (Sonoma): `MenuBarExtra` + Observation (`@Observable`) |
 | Swift | 6, strict concurrency |
-| UI | SwiftUI `MenuBarExtra` with the `.menu` style (a regular menu, not a popover) |
+| UI | SwiftUI `MenuBarExtra` with the `.window` style (popover with progress bars) |
+| Localisation | String Catalog, English base + Russian; accessibility identifiers for UI checks |
 | Keychain | `SecItemCopyMatching` directly, no third-party wrappers |
 | Networking | `URLSession`, `async/await` |
 | Dependencies | no third-party packages in v1 |
@@ -362,45 +423,52 @@ account.
 
 ---
 
-## 6. Open questions
+## 6. Decisions (2026-10-23)
 
-1. UI language: English in this spec (public project). Previous projects used
-   Russian. Confirm.
-2. Name: `ClaudeUsageStatus` (after the project folder). Alternatives for the
-   public repository are open — the word "Claude" in an app name may be
-   undesirable from a trademark standpoint.
-3. Bundle ID: `com.xroserok.ClaudeUsageStatus`, by analogy with BillSplitter?
-4. `MenuBarExtra` style: `.menu` (native menu, simple, no custom layout) or
-   `.window` (popover with full SwiftUI). v1 proposes `.menu`; `.window` is
-   needed once we want progress bars.
+Answers to the questions that were open in the first version of this spec.
+
+1. UI language: **English and Russian** from v1 (§3.3).
+2. Name: **YourLimit**; the word "Claude" stays out of the app name, bundle and
+   repository (trademark). Repository `Xroserok/yourlimit`. The three packages
+   keep their domain names (`UsageDomain`, `UsageData`, `UsagePresentation`).
+3. Bundle ID: **`com.xroserok.yourlimitbar`**; also the `os.Logger` subsystem.
+4. `MenuBarExtra` style: **`.window`**, because v1 shows progress bars with
+   threshold colours (§3.2).
+5. Keychain "Deny" is its own state with a Retry button (§3.4); it is not
+   reported as "Sign in to Claude Code".
+6. Launch at Login is off by default.
 
 ---
 
 ## 7. Acceptance criteria for v1
 
-1. `scripts/build.sh` from a clean clone builds `ClaudeUsageStatus.app` with no
+1. `scripts/build.sh` from a clean clone builds `YourLimit.app` with no
    errors; `xcodebuild test` is green; SwiftLint reports no warnings.
 2. The app launches, the menu bar shows two percentages matching the output of
    `/usage` in Claude Code; there is no Dock icon.
 3. Within 60 seconds of active work in Claude Code the numbers change without
    restarting the app.
-4. The dropdown shows the session, the week, per-model rows and the update
-   time; the reset is computed correctly (check against `resets_at`).
-5. With the network off the menu shows "Offline", the numbers stay as they
+4. The popover shows the session, the week, per-model blocks and the update
+   time; the reset is computed correctly (check against `resets_at`); bar
+   colours switch at 80 % and 95 % (unit tests on the threshold function).
+5. With the network off the popover shows "Offline", the numbers stay as they
    were, and after the network is back they update by themselves.
 6. With the Keychain item removed (or the token expired) the menu bar shows
-   `⚠︎` and the menu says "Sign in to Claude Code"; after `claude` → sign in
-   everything recovers without restarting the app.
+   `⚠︎` and the popover says "Sign in to Claude Code"; after `claude` → sign in
+   everything recovers without restarting the app. "Deny" in the Keychain
+   dialog shows "Keychain access denied" and Retry re-opens the dialog.
 7. The launch-at-login checkbox toggles and persists across restarts.
 8. The token appears nowhere in logs, UserDefaults or files (grep over
    `~/Library` after a working session).
 9. "Quit" terminates the process completely.
+10. Launched with `-AppleLanguages "(ru)"` the popover is in Russian; the
+    identifiers from §3.3 are present in both languages (`scripts/verify-ui.sh`).
 
 ---
 
 ## 8. Backlog (after v1)
 
-- Colour indication and icon by `severity` / thresholds (80%, 95%).
+- Colour or icon in the menu bar itself; colour by `severity` once its values are known.
 - System notifications at thresholds and on window reset.
 - Weekly breakdown by product (`seven_day_breakdown`).
 - Extra usage and `spend` (money) once enabled.

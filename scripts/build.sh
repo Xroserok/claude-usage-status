@@ -1,14 +1,14 @@
 #!/bin/bash
-# scripts/build.sh — build ClaudeUsageStatus.app from the terminal.
+# scripts/build.sh — build YourLimit.app from the terminal.
 #
-# Output: .build/DerivedData/Build/Products/Release/ClaudeUsageStatus.app
+# Output: .build/DerivedData/Build/Products/Release/YourLimit.app
 # The bundle stays where Xcode put it: exactly one copy of the app on disk
 # (CLAUDE.md "Hard rules"). Signing is ad hoc and done by xcodebuild itself
 # (CODE_SIGN_IDENTITY = "-" in Project.swift); this script only verifies it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP=ClaudeUsageStatus
+APP=YourLimit
 DERIVED=.build/DerivedData
 APP_PATH="$DERIVED/Build/Products/Release/$APP.app"
 

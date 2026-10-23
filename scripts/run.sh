@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-APP=ClaudeUsageStatus
+APP=YourLimit
 APP_PATH=.build/DerivedData/Build/Products/Release/$APP.app
 
 scripts/build.sh

@@ -1,12 +1,12 @@
 #!/bin/bash
 # scripts/acceptance.sh — spec.md §7 acceptance criteria.
-# Automatic: 1, 2, 4, 8, 9. Manual (printed at the end): 3, 5, 6, 7.
+# Automatic: 1, 2, 4, 8, 9, 10. Manual (printed at the end): 3, 5, 6, 7.
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$PWD
-APP=ClaudeUsageStatus
+APP=YourLimit
 APP_PATH=.build/DerivedData/Build/Products/Release/$APP.app
-BUNDLE_ID=com.xroserok.ClaudeUsageStatus
+BUNDLE_ID=com.xroserok.yourlimitbar
 TOKEN_RE='sk-ant-oat01-[A-Za-z0-9_-]{20,}'
 fail=0
 ok() { echo "✔ $1"; }
@@ -30,12 +30,17 @@ fi
 STRAY=$(mdfind "kMDItemFSName == '$APP.app'" 2>/dev/null | grep -v "^$ROOT/.build/" | wc -l | tr -d ' ')
 [ "$STRAY" = "0" ] && ok "  no stray $APP.app copies" || ko "  $STRAY stray $APP.app copies outside .build"
 
-# 2 launch, title, no Dock · 4 dropdown rows
+# 2 launch, title, no Dock · 4 popover blocks · 10 Russian strings
 if OUT=$(scripts/verify-ui.sh); then
   ok "2 launches, 'NN% · NN%' title, no Dock icon"
-  ok "4 dropdown has Session / Week / Updated rows"
+  ok "4 popover has session, weekly and updated elements"
 else
   ko "2/4 verify-ui: $(tail -1 <<<"$OUT")"
+fi
+if OUT=$(UI_LANG=ru scripts/verify-ui.sh); then
+  ok "10 Russian popover with -AppleLanguages (ru)"
+else
+  ko "10 verify-ui (ru): $(tail -1 <<<"$OUT")"
 fi
 echo "   compare the title with /usage in Claude Code (manual)"
 

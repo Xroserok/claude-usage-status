@@ -4,7 +4,10 @@ Cross-session memory. Read silently at session start; update on "recap".
 
 ## Status (2026-10-23)
 
-Lesson 0 (harness) complete. No app code yet. Next: lesson 1, `PLAN.md` from `spec.md` in plan mode.
+Lesson 0 (harness) complete, spec §6 questions answered (2026-10-23), repository renamed to
+`Xroserok/yourlimit`, app target `YourLimit`. No app code yet. Next: lesson 1, `PLAN.md` from
+`spec.md` in plan mode. The local folder is still `claude_usage_status`; rename it to `yourlimit`
+outside a Claude Code session (the folder name keys Claude Code's per-project memory).
 
 ## Done
 
@@ -26,12 +29,15 @@ Lesson 0 (harness) complete. No app code yet. Next: lesson 1, `PLAN.md` from `sp
 - MVVM-C with a coordinator per platform; view models live in `UsagePresentation` and know
   nothing about the platform (future iOS widget and watchOS complication).
 - The built app stays in `.build/DerivedData/Build/Products/Release/`; one copy on disk.
-- Bundle ID `com.xroserok.ClaudeUsageStatus` (spec §6 still lists it as a question).
+- Name YourLimit (no "Claude" in app, bundle or repo), bundle ID `com.xroserok.yourlimitbar`.
+- `MenuBarExtra` `.window`: popover with progress bars coloured by local thresholds 80 % / 95 %.
+- English + Russian from v1 through a String Catalog; UI checks go by accessibility identifiers.
+- Keychain "Deny" is its own state with Retry; Launch at Login off by default.
 
 ## Known issues / open
 
 - Hooks match some rules by substring (`pkill -f`, `launchctl`): a commit message containing them
   is blocked; reword the message rather than weakening the rule.
-- The `menu bar 2` / `title` path in `verify-ui.sh` is written for `NSStatusItem`; confirm it also
-  holds for SwiftUI `MenuBarExtra` at lesson 1 and adjust the script if the attribute differs.
-- Spec §6 open questions (app name vs trademark, `.menu` vs `.window`) are unanswered.
+- `verify-ui.sh` reads the status item through `menu bar 2` and the popover through `window 1` +
+  `AXIdentifier`; written blind for SwiftUI `MenuBarExtra(.window)`, to be confirmed at the first
+  UI step of lesson 1 and adjusted if the attributes differ.

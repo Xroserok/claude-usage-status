@@ -1,7 +1,9 @@
-# Claude Usage Status
+# YourLimit
 
 A macOS menu bar app that shows how much of your Claude subscription limits you have used:
-the 5-hour session and the weekly window, as two percentages next to the clock.
+the 5-hour session and the weekly window, as two percentages next to the clock. A click opens
+a popover with a progress bar per limit, coloured at 80 % and 95 %, and the reset times.
+English and Russian.
 
 ```
 31% · 47%
@@ -31,7 +33,7 @@ instead of crashing.
 ```sh
 mise install
 scripts/run.sh            # generate the Xcode project, build, sign ad hoc, launch
-scripts/verify-ui.sh      # check the status item and the menu through System Events
+scripts/verify-ui.sh      # check the status item and the popover through System Events
 scripts/acceptance.sh     # acceptance criteria from spec §7
 ```
 
@@ -41,7 +43,7 @@ scripts/acceptance.sh     # acceptance criteria from spec §7
 Packages/UsageDomain         models and protocols (Foundation only)
 Packages/UsageData           URLSession client, Keychain reader
 Packages/UsagePresentation   view models and formatting (platform-free)
-Apps/macOS                   menu bar app: SwiftUI MenuBarExtra + coordinator
+Apps/macOS                   menu bar app: SwiftUI MenuBarExtra popover + coordinator, String Catalog
 Tools/usage-probe            CLI that exercises the data layer without the app
 scripts/                     build, run and verification scripts
 .claude/                     Claude Code hooks, skills and agents used to develop this repo

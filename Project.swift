@@ -4,7 +4,7 @@ import ProjectDescription
 // The app target is a thin shell: entry point, MenuBarExtra, the macOS
 // coordinator and LaunchAtLogin. All logic lives in the local packages.
 let project = Project(
-    name: "ClaudeUsageStatus",
+    name: "YourLimit",
     organizationName: "Xroserok",
     packages: [
         .local(path: "Packages/UsageDomain"),
@@ -17,10 +17,10 @@ let project = Project(
     ]),
     targets: [
         .target(
-            name: "ClaudeUsageStatus",
+            name: "YourLimit",
             destinations: .macOS,
             product: .app,
-            bundleId: "com.xroserok.ClaudeUsageStatus",
+            bundleId: "com.xroserok.yourlimitbar",
             deploymentTargets: .macOS("14.0"),
             // Explicit plist: Tuist's macOS default adds NSMainStoryboardFile,
             // which a SwiftUI @main app does not have.
@@ -50,6 +50,6 @@ let project = Project(
                 "CODE_SIGN_IDENTITY": "-",
                 "CODE_SIGN_STYLE": "Manual",
             ])
-        ),
+        )
     ]
 )

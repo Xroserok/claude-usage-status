@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Build ClaudeUsageStatus.app, launch it and verify the status item and the dropdown through System Events. Run after any change that touches the app or the presentation layer.
+description: Build YourLimit.app, launch it and verify the status item and the popover through System Events. Run after any change that touches the app or the presentation layer.
 disable-model-invocation: true
 ---
 Run, in this order, and quote each script's output verbatim:

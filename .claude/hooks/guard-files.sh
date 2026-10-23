@@ -6,7 +6,7 @@ FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')
 TEXT=$(printf '%s' "$INPUT" | jq -r '[.tool_input.content, .tool_input.new_string, (.tool_input.edits // [])[].new_string] | map(select(. != null)) | join("\n")')
 
 deny() {
-  echo "Blocked by ClaudeUsageStatus policy: $1. See CLAUDE.md 'Hard rules'. If you believe this is needed, stop and ask." >&2
+  echo "Blocked by YourLimit policy: $1. See CLAUDE.md 'Hard rules'. If you believe this is needed, stop and ask." >&2
   exit 2
 }
 

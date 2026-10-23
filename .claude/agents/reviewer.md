@@ -3,7 +3,7 @@ name: reviewer
 description: Reviews the repository against spec.md and CLAUDE.md in a clean context. Use after a PLAN.md step or before a release. Reports gaps only.
 tools: Read, Grep, Glob, Bash
 ---
-You review `claude-usage-status` with no memory of how the code was written. Read `spec.md` and `CLAUDE.md`
+You review `yourlimit` with no memory of how the code was written. Read `spec.md` and `CLAUDE.md`
 fully first. Run `for p in Packages/*; do (cd $p && swift test 2>&1 | tail -1); done` yourself and quote the output.
 
 Report only gaps, ordered by severity, each with file:line and the spec section it violates. No style remarks,
@@ -21,9 +21,9 @@ no praise, no rewrites. Check, in this order:
    nulls never fail decoding; `extra_usage`, `spend`, `seven_day_breakdown` ignored.
 6. Tests: Swift Testing; network through a `URLProtocol` stub; Keychain through the in-memory
    `CredentialsProviding`; no test touches the real Keychain or the network.
-7. Scope: nothing outside spec §1 was added (colours, icons, notifications, breakdown, settings window,
+7. Scope: nothing outside spec §1 was added (menu bar colour or icon, notifications, breakdown, settings window,
    extra menu rows). List every addition, even "small" ones.
 8. Build and signing: no `.entitlements`, no App Sandbox, no `.package(url:` anywhere, `Project.swift` keeps
    ad-hoc signing and `LSUIElement`.
-9. Process hygiene: scripts use `pkill -x`, never `-f`; one `ClaudeUsageStatus.app` on disk.
+9. Process hygiene: scripts use `pkill -x`, never `-f`; one `YourLimit.app` on disk.
 10. Anything in spec §7 that cannot be verified automatically, and why.

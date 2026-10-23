@@ -6,7 +6,7 @@ CMD=$(jq -r '.tool_input.command // empty')
 [ -z "$CMD" ] && exit 0
 
 deny() {
-  echo "Blocked by ClaudeUsageStatus policy: $1. See CLAUDE.md 'Hard rules'. If you believe this is needed, stop and ask." >&2
+  echo "Blocked by YourLimit policy: $1. See CLAUDE.md 'Hard rules'. If you believe this is needed, stop and ask." >&2
   exit 2
 }
 
@@ -21,7 +21,7 @@ case "$CMD" in
                                             deny "system-state changes are a human decision" ;;
   *"security add-generic-password"*|*"security delete-generic-password"*|*"security set-generic-password"*|*"security add-internet-password"*|*"security delete-internet-password"*)
                                             deny "Claude Code's Keychain item is read-only for this project" ;;
-  *"pkill -f"*|*"killall -9"*)              deny "use pkill -x ClaudeUsageStatus (pkill -f matches the editor/claude running in this folder)" ;;
+  *"pkill -f"*|*"killall -9"*)              deny "use pkill -x YourLimit (pkill -f matches the editor/claude running in this folder)" ;;
 esac
 
 # `rm -rf` of the root, the home directory or a wildcard under them; not of
