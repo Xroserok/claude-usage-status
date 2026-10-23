@@ -1,0 +1,55 @@
+# Lint our code only.
+included:
+  - Packages/UsageDomain/Sources
+  - Packages/UsageDomain/Tests
+  - Packages/UsageData/Sources
+  - Packages/UsageData/Tests
+  - Packages/UsagePresentation/Sources
+  - Packages/UsagePresentation/Tests
+  - Apps
+  - Tools
+
+# Skip generated and build output.
+excluded:
+  - Derived
+  - Tuist
+  - .build
+  - "**/.build"
+  - "**/*.generated.swift"
+
+# Enabled on top of the defaults.
+opt_in_rules:
+  - empty_count                         # prefer .isEmpty over .count == 0
+  - closure_spacing                     # spacing inside closures
+  - sorted_imports                      # keep imports alphabetical (swift format does the same)
+  - vertical_whitespace_closing_braces  # no blank line before }
+  - force_unwrapping                    # no `!` outside tests
+
+# Too noisy, or owned by swift format.
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
+    - x
+    - y
+    - i
+
+line_length:
+  warning: 120
+  error: 200
+
+function_body_length:
+  warning: 50
+  error: 100
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 400
+  error: 600

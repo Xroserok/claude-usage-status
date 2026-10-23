@@ -1,0 +1,19 @@
+# Git hooks for humans (Claude Code has its own hooks in .claude/).
+# Install once per clone: `mise x -- lefthook install`.
+pre-commit:
+  parallel: true
+  commands:
+    swiftlint:
+      glob: "*.swift"
+      run: mise x -- swiftlint lint --strict --quiet {staged_files}
+    swift-format:
+      glob: "*.swift"
+      run: swift format lint --strict {staged_files}
+    no-token:
+      # An OAuth token must never be committed, in any file.
+      run: "! git diff --cached -U0 | grep -E 'sk-ant-oat01-[A-Za-z0-9_-]{20,}'"
+
+pre-push:
+  commands:
+    package-tests:
+      run: for p in Packages/*; do (cd "$p" && swift test) || exit 1; done

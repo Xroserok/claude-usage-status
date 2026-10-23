@@ -5,10 +5,10 @@ let package = Package(
     name: "UsageData",
     platforms: [.macOS(.v14), .iOS(.v17), .watchOS(.v10)],
     products: [
-        .library(name: "UsageData", targets: ["UsageData"]),
+        .library(name: "UsageData", targets: ["UsageData"])
     ],
     dependencies: [
-        .package(path: "../UsageDomain"),
+        .package(path: "../UsageDomain")
     ],
     targets: [
         .target(

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned tools (.mise.toml)
+        uses: jdx/mise-action@v2
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Package tests
+        run: |
+          set -o pipefail
+          for p in Packages/*; do (cd "$p" && swift test) || exit 1; done
+
+      - name: Packages build for iOS and watchOS
+        run: |
+          set -o pipefail
+          cd Packages/UsagePresentation
+          xcodebuild -scheme UsagePresentation -destination 'generic/platform=iOS' build | mise x -- xcsift
+          xcodebuild -scheme UsagePresentation -destination 'generic/platform=watchOS' build | mise x -- xcsift
+
+      - name: SwiftLint
+        run: mise x -- swiftlint lint --strict
+
+      - name: swift format lint
+        run: swift format lint --strict --recursive Packages Apps Tools
+
+      - name: Generate and build the app
+        run: |
+          set -o pipefail
+          mise x -- tuist generate --no-open
+          xcodebuild -workspace ClaudeUsageStatus.xcworkspace -scheme ClaudeUsageStatus \
+            -configuration Release -derivedDataPath .build/DerivedData build | mise x -- xcsift

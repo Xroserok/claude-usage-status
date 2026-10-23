@@ -1,4 +1,5 @@
 import Testing
+
 @testable import UsageData
 
 @Suite struct UsageDataSmokeTests {

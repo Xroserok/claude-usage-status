@@ -18,7 +18,7 @@ let package = Package(
                 .product(name: "UsageDomain", package: "UsageDomain"),
                 .product(name: "UsageData", package: "UsageData"),
             ]
-        ),
+        )
     ],
     swiftLanguageModes: [.v6]
 )
