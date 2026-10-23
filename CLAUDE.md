@@ -11,7 +11,11 @@ xcodebuild -workspace ClaudeUsageStatus.xcworkspace -scheme ClaudeUsageStatus -c
 pkill -x ClaudeUsageStatus                       # stop the app by process name (never pkill -f: it matches the editor/claude in this folder)
 (cd Packages/UsagePresentation && xcodebuild -scheme UsagePresentation -destination 'generic/platform=iOS' build 2>&1 | mise x -- xcsift)   # packages stay iOS/watchOS-buildable (also platform=watchOS)
 mise x -- swiftlint                              # lint
-scripts/build.sh, scripts/run.sh, scripts/verify-ui.sh, scripts/acceptance.sh   # added in lesson 0.5
+scripts/build.sh                                 # Release build → .build/DerivedData/Build/Products/Release/ClaudeUsageStatus.app, checks ad-hoc signature, no entitlements, LSUIElement
+scripts/run.sh                                   # build.sh + pkill -x + open; the only way to launch the app (never `open` a second copy)
+scripts/verify-ui.sh                             # status item title + dropdown rows via System Events (Accessibility is granted to Terminal); prints OK or FAIL <reason>
+scripts/acceptance.sh                            # spec §7 criteria 1, 2, 4, 8, 9 automatically; 3, 5, 6, 7 are listed for a human
+/verify                                          # skill: swift test + build.sh + verify-ui.sh, quote the output; use after any UI change
 
 ## Hard rules
 - The OAuth token is sent only to `https://api.anthropic.com`. Never log it, never put it in an error message,

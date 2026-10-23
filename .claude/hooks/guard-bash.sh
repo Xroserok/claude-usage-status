@@ -22,9 +22,13 @@ case "$CMD" in
   *"security add-generic-password"*|*"security delete-generic-password"*|*"security set-generic-password"*|*"security add-internet-password"*|*"security delete-internet-password"*)
                                             deny "Claude Code's Keychain item is read-only for this project" ;;
   *"pkill -f"*|*"killall -9"*)              deny "use pkill -x ClaudeUsageStatus (pkill -f matches the editor/claude running in this folder)" ;;
-  *"rm -rf /"*|*"rm -rf ~"*|*"rm -rf \$HOME"*)
-                                            deny "no" ;;
 esac
+
+# `rm -rf` of the root, the home directory or a wildcard under them; not of
+# a path such as /tmp/x or ~/project/.build.
+if printf '%s' "$CMD" | grep -Eq 'rm[[:space:]]+-[a-zA-Z]*[rR][a-zA-Z]*[[:space:]]+(/|~|\$HOME)/?(\*)?([[:space:]]|$)'; then
+  deny "rm -rf of / or the home directory"
+fi
 
 # Only ad-hoc signing: `codesign -s -`. Any other identity is denied.
 if printf '%s' "$CMD" | grep -Eq 'codesign[^|;&]*(-s|--sign)[[:space:]]+[^-[:space:]]'; then
