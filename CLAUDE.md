@@ -16,6 +16,7 @@ scripts/run.sh                                   # build.sh + pkill -x + open; t
 scripts/verify-ui.sh                             # status item title + popover elements by accessibility identifier via System Events (Accessibility is granted to Terminal); UI_LANG=ru checks the Russian strings; prints OK or FAIL <reason>
 scripts/acceptance.sh                            # spec §7 criteria 1, 2, 4, 8, 9, 10 automatically; 3, 5, 6, 7 are listed for a human
 /verify                                          # skill: swift test + build.sh + verify-ui.sh, quote the output; use after any UI change
+/step N                                          # skill: implement PLAN.md step N only, run its oracle, quote the output, no commit
 
 ## Hard rules
 - The OAuth token is sent only to `https://api.anthropic.com`. Never log it, never put it in an error message,
